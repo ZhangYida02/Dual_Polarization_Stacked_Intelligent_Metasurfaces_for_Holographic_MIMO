@@ -1,0 +1,84 @@
+clc
+clear
+close all
+
+
+%%
+rng(2)
+Parameter
+TX_SIM_Initialize
+RX_SIM_Initialize
+Channel
+
+[E,Lam,F]=svd(DpG);
+lam=Lam(1:2*S,1:2*S)
+
+%%
+WaterFilling
+
+%%
+for seed=1:100
+    rng(seed)
+    Phi_Initialize
+    TX_SIM
+    RX_SIM
+    DpH=DpGRxSim*DpG*DpGTxSim;
+    alpha=inv(DpH(:)'*DpH(:))*DpH(:)'*lam(:);
+    LossInitialize(seed)=norm(alpha*DpH-lam,'fro')^2/norm(lam,'fro')^2;
+end
+
+%%
+[LossInitializeMin,index]=min(LossInitialize)
+rng(index)
+Phi_Initialize
+TX_SIM
+RX_SIM
+DpH=DpGRxSim*DpG*DpGTxSim;
+alpha=inv(DpH(:)'*DpH(:))*DpH(:)'*lam(:);
+Loss(1)=norm(alpha*DpH-lam,'fro')^2/norm(lam,'fro')^2
+% CDpHmimo(1)=log2(real(det(eye(2*S,2*S)+P/(2*S*noise)*DpH*DpH')));
+
+%%
+count=2;
+for round=2:21
+    round
+    UpdateTxPhi
+    UpdateRxPhi
+    eata=eata*beta;
+    CDpHmimoCal
+end
+
+
+%%
+CDpHmimoIdeal=sum(log2(1+P/(2*S)*diag(lam).^2/noise));
+CDpHmimoIdealWF=sum(log2(1+Ps.*diag(lam).^2/noise));
+
+%plot
+% figure
+% hold on
+% yline(CDpHmimoIdeal,'-r')
+% % yline(CDpHmimoIdealWF,'-c')
+% plot(CDpHmimo,'-b')
+% % plot(CDpHmimoWF,'-g')
+% hold off
+% 
+figure
+hold on
+plot(Loss(1:L+K:end),'-r')
+hold off
+
+figure
+h=heatmap(abs(alpha*DpH)); 
+h.CellLabelColor = 'none';
+% colormap('jet')
+% caxis([max(max(abs(alpha*DpH)))*10^-1 max(max(abs(alpha*DpH)))])
+caxis([5*10^-8 5*10^-7])
+ylabel('Data stream index')
+xlabel('Data stream index')
+
+
+abs(alpha)
+CDpHmimoIdeal(end)
+CDpHmimo(end)
+Loss(end)
+Loss(1:L+K:end)
